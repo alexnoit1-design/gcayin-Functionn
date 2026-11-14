@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="hy">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Գծային ֆունկցիա</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
+    <style>
+        :root {
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            --bg: #f6f7fb;
+            --card: #fff;
+            --tx: #1b1f2a;
+            --mu: #667085;
+            --ac: #4f46e5;
+            --bd: #e3e6ef;
+            --gr: #e8eaf2
+        }
+
+        @media(prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #38457a;
+                --card: #1c1f2b;
+                --tx: #e8eaf2;
+                --mu: #9aa3b8;
+                --ac: #8b85ff;
+                --bd: #2c3042;
+                --gr: #262a3a
+            }
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--tx);
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            padding: 16px
+        }
+
+        .w {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            gap: 16px
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem
+        }
+
+        .c {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 16px
+        }
+
+        .r {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: end
+        }
+
+        label {
+            display: grid;
+            gap: 4px;
+            font-size: .85rem;
+            color: var(--mu)
+        }
+
+        input {
+            width: 100px;
+            padding: 8px;
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--tx);
+            font-size: 1rem
+        }
+
+        button {
+            padding: 9px 14px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--ac);
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            max-height: 520px;
+            background: var(--bg);
+            border-radius: 10px;
+            display: block
+        }
+
+        .eq {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ac)
+        }
+
+        ul {
+            margin: 8px 0 0;
+            padding-left: 20px;
+            line-height: 1.7
+        }
+
+        .t {
+            overflow-x: auto
+        }
+
+        table {
+            border-collapse: collapse;
+            min-width: 260px
+        }
+
+        td,
+        th {
+            border: 1px solid var(--bd);
+            padding: 6px 14px;
+            text-align: center
+        }
+    </style>
+</head>
+
+<body>
+    <div class="w">
+        <h1>📈 Գծային ֆունկցիա y = kx + b</h1>
+        <div class="c">
+            <div class="r">
+                <label>k (թեքություն)<input id="k" type="number" step="any" value="2"></label>
+                <label>b (տեղաշարժ)<input id="b" type="number" step="any" value="1"></label>
+                <label>Սանդղակ ±<input id="R" type="number" step="any" value="10" min="1"></label>
+                <button id="go">Գծել</button>
+            </div>
+        </div>
+        <div class="c">
+            <div class="eq" id="eq"></div>
+            <ul id="info"></ul>
+        </div>
+        <div class="c"><canvas id="cv" width="800" height="800"></canvas></div>
+        <div class="c">
+            <div class="r">
+                <label>x<input id="x" type="number" step="any" value="3"></label>
+                <button id="calc">Հաշվել y</button>
+                <div id="yres"></div>
+            </div>
+        </div>
+        <div class="c">
+            <div class="r">
+                <label>x₁<input id="x1" type="number" step="any" value="1"></label>
+                <label>y₁<input id="y1" type="number" step="any" value="3"></label>
+                <label>x₂<input id="x2" type="number" step="any" value="2"></label>
+                <label>y₂<input id="y2" type="number" step="any" value="5"></label>
+                <button id="fit">Գտնել k և b</button>
+            </div>
+            <div id="fres" style="margin-top:10px"></div>
+        </div>
+        <div class="c t">
+            <table id="tb"></table>
+        </div>
+    </div>
+    <script>
+        const $ = id => document.getElementById(id);
+        const cv = $("cv"), ctx = cv.getContext("2d");
+        const num = v => Math.round(v * 10000) / 10000;
+        function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() }
+        function draw() {
+            const k = parseFloat($("k").value) || 0, b = parseFloat($("b").value) || 0, R = Math.max(1, parseFloat($("R").value) || 10);
+            const W = cv.width, s = W / (2 * R), o = W / 2;
+            ctx.clearRect(0, 0, W, W);
+            ctx.lineWidth = 1; ctx.strokeStyle = css("--gr"); ctx.fillStyle = css("--mu"); ctx.font = "18px sans-serif";
+            const step = R > 40 ? 10 : R > 15 ? 5 : R > 6 ? 2 : 1;
+            for (let i = -Math.floor(R); i <= R; i++) {
+                const p = o + i * s;
+                ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, W); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(W, p); ctx.stroke();
+                if (i !== 0 && i % step === 0) { ctx.fillText(i, p + 3, o + 18); ctx.fillText(-i, o + 5, p - 3) }
+            }
+            ctx.strokeStyle = css("--mu"); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(o, 0); ctx.lineTo(o, W); ctx.moveTo(0, o); ctx.lineTo(W, o); ctx.stroke();
+            ctx.strokeStyle = css("--ac"); ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(o - R * s, o - (k * -R + b) * s);
+            ctx.lineTo(o + R * s, o - (k * R + b) * s);
+            ctx.stroke();
+            ctx.fillStyle = css("--ac");
+            ctx.beginPath(); ctx.arc(o, o - b * s, 7, 0, 7); ctx.fill();
+            if (k !== 0) { ctx.beginPath(); ctx.arc(o + (-b / k) * s, o, 7, 0, 7); ctx.fill() }
+            let sg = b < 0 ? "−" : "+";
+            $("eq").textContent = "y = " + (k === 1 ? "" : k === -1 ? "−" : num(k)) + "x " + sg + " " + Math.abs(num(b));
+            const li = [];
+            li.push("📍 Հատում է y առանցքը՝ (0; " + num(b) + ")");
+            li.push(k === 0 ? "➖ k = 0, գիծը հորիզոնական է" : "📍 Հատում է x առանցքը՝ (" + num(-b / k) + "; 0)");
+            li.push(k > 0 ? "⬆️ Ֆունկցիան աճող է (k > 0)" : k < 0 ? "⬇️ Ֆունկցիան նվազող է (k < 0)" : "↔️ Ֆունկցիան հաստատուն է");
+            li.push("📐 Թեքության անկյուն՝ " + num(Math.atan(k) * 180 / Math.PI) + "°");
+            $("info").innerHTML = li.map(t => "<li>" + t + "</li>").join("");
+            let h = "<tr><th>x</th><th>y</th></tr>";
+            for (let x = -5; x <= 5; x++)h += "<tr><td>" + x + "</td><td>" + num(k * x + b) + "</td></tr>";
+            $("tb").innerHTML = h;
+        }
+        $("go").onclick = draw;
+        ["k", "b", "R"].forEach(i => $(i).oninput = draw);
+        $("calc").onclick = () => {
+            const k = parseFloat($("k").value) || 0, b = parseFloat($("b").value) || 0, x = parseFloat($("x").value);
+            $("yres").textContent = isNaN(x) ? "" : "y = " + num(k * x + b)
+        };
+        $("fit").onclick = () => {
+            const x1 = parseFloat($("x1").value), y1 = parseFloat($("y1").value), x2 = parseFloat($("x2").value), y2 = parseFloat($("y2").value);
+            if ([x1, y1, x2, y2].some(isNaN)) return;
+            if (x1 === x2) { $("fres").textContent = "⚠️ x₁ և x₂ պետք է տարբեր լինեն"; return }
+            const k = (y2 - y1) / (x2 - x1), b = y1 - k * x1;
+            $("fres").textContent = "✅ k = " + num(k) + ",  b = " + num(b);
+            $("k").value = num(k); $("b").value = num(b); draw()
+        };
+        draw();
+    </script>
+</body>
+
+</html>
